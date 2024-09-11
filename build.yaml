@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      function_widget:
+        options:
+          debugFillProperties: true
+          widgetType: stateless
