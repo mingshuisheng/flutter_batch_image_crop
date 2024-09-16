@@ -63,6 +63,8 @@ extension MyStyleUtils on Widget {
           customPath: customPath,
           stackFit: stackFit,
           child: this);
+
+  Widget positionedFill() => Positioned.fill(child: this);
 }
 
 extension MyStyleFlexUtils on Flex {

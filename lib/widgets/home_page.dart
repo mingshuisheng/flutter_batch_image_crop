@@ -45,25 +45,61 @@ Widget _page({required Widget appBar, required Widget content}) {
 @hwidget
 Widget _content(BuildContext context) {
   final fileList = useState<List<XFile>>([]);
+  final adding = useRef(false);
+  final addImage = useMemoized(() => (List<XFile>? images) async {
+        if (images != null) {
+          final newImages = await getImageFileByXFile(images);
+          fileList.value = <XFile>{
+            ...fileList.value,
+            ...newImages,
+          }.toList();
+        }
+      });
+
+  final handleAddClick = useMemoized(() => () async {
+        if (adding.value) return;
+        adding.value = true;
+        final newImages = await pickImageFiles();
+        await addImage(newImages);
+        adding.value = false;
+      });
+
+  final handleDelete = useMemoized(() => (int index) {
+        fileList.value.removeAt(index);
+        fileList.value = [...fileList.value];
+      });
+
   return FileDragArea(
-    child:
-        fileList.value.isEmpty ? null : RealContent(fileList: fileList.value),
-    callback: (files) async {
-      final newImages = await getImageFileByXFile(files);
-      fileList.value = <XFile>{
-        ...fileList.value,
-        ...newImages,
-      }.toList();
-    },
+    callback: addImage,
+    child: fileList.value.isEmpty
+        ? null
+        : RealContent(
+            fileList: fileList.value,
+            onAddImage: handleAddClick,
+            onDelete: handleDelete),
   );
 }
 
 @hwidget
-Widget _realContent(BuildContext context, {required List<XFile> fileList}) {
+Widget _realContent(
+  BuildContext context, {
+  required List<XFile> fileList,
+  required void Function() onAddImage,
+  required void Function(int) onDelete,
+}) {
   final theme = FluentTheme.of(context);
   final selected = useState(0);
   final showLoading = useState(false);
   final applicationState = context.read<ApplicationState>();
+  useEffect(() {
+    if (selected.value < 0) {
+      selected.value = 0;
+    }
+    if (selected.value >= fileList.length) {
+      selected.value = fileList.length - 1;
+    }
+    return null;
+  }, [fileList, selected]);
 
   return Stack(children: [
     Row(
@@ -72,6 +108,8 @@ Widget _realContent(BuildContext context, {required List<XFile> fileList}) {
             fileList: fileList,
             selected: selected.value,
             onChange: (index) => selected.value = index,
+            onAddImage: onAddImage,
+            onDelete: onDelete,
             onExport: () async {
               showLoading.value = true;
               final distPath = await FilePicker.platform.getDirectoryPath(
@@ -127,11 +165,15 @@ Widget _realContent(BuildContext context, {required List<XFile> fileList}) {
 }
 
 @hwidget
-Widget _side(BuildContext context,
-    {required List<XFile> fileList,
-    required int selected,
-    required void Function(int) onChange,
-    required void Function() onExport}) {
+Widget _side(
+  BuildContext context, {
+  required List<XFile> fileList,
+  required int selected,
+  required void Function(int) onChange,
+  required void Function() onAddImage,
+  required void Function() onExport,
+  required void Function(int) onDelete,
+}) {
   final sidebarItems = fileList
       .map((file) => SideBarItemData(text: file.name, toolTip: file.path))
       .toList();
@@ -142,12 +184,19 @@ Widget _side(BuildContext context,
         items: sidebarItems,
         selected: selected,
         onTap: onChange,
+        onDelete: onDelete,
       ).expanded(),
+      const Divider().width(double.infinity),
+      const SizedBox(height: 10),
+      FilledButton(
+        onPressed: onAddImage,
+        child: const Text("添加图片"),
+      ).cursor(SystemMouseCursors.click).width(double.infinity),
       const SizedBox(height: 10),
       FilledButton(
         onPressed: onExport,
         child: const Text("导出图片"),
-      ).width(double.infinity),
+      ).cursor(SystemMouseCursors.click).width(double.infinity),
       const SizedBox(height: 10),
     ],
   );

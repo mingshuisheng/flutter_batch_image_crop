@@ -8,19 +8,21 @@ part 'single_child_two_dimensional_scroll_view.g.dart';
 
 @hwidget
 Widget _singleChildTwoDimensionalScrollView(Widget child,
-    {bool disable = false}) {
-  final hovController = useScrollController();
-  final verController = useScrollController();
+    {bool disable = false,
+    required ScrollController horizontalController,
+    required ScrollController verticalController}) {
   return LayoutBuilder(builder: (ctx, _) {
     return Scrollbar(
-      controller: verController,
+      controller: verticalController,
       child: Scrollbar(
-        controller: hovController,
+        controller: horizontalController,
         child: sv.SingleChildTwoDimensionalScrollView(
-          horizontalController: hovController,
-          verticalController: verController,
-          horizontalPhysics: disable ? NeverScrollableScrollPhysics() : null,
-          verticalPhysics: disable ? NeverScrollableScrollPhysics() : null,
+          horizontalController: horizontalController,
+          verticalController: verticalController,
+          horizontalPhysics:
+              disable ? const NeverScrollableScrollPhysics() : null,
+          verticalPhysics:
+              disable ? const NeverScrollableScrollPhysics() : null,
           child: child,
         ),
       ),
@@ -29,6 +31,14 @@ Widget _singleChildTwoDimensionalScrollView(Widget child,
 }
 
 extension TwoDimensionalScrollView on Widget {
-  Widget twoDimensionalScrollView([bool disable = false]) =>
-      SingleChildTwoDimensionalScrollView(this, disable: disable);
+  Widget twoDimensionalScrollView(
+          {bool disable = false,
+          required ScrollController horizontalController,
+          required ScrollController verticalController}) =>
+      SingleChildTwoDimensionalScrollView(
+        this,
+        disable: disable,
+        horizontalController: horizontalController,
+        verticalController: verticalController,
+      );
 }

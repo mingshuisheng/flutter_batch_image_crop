@@ -13,7 +13,7 @@ const ico = ['ico'];
 const pvr = ['pvr'];
 const pnm = ['pnm', 'pbm', 'pgm', 'ppm'];
 
-const images = <String>[
+const imageExtensions = <String>[
   ...jpeg,
   ...png,
   ...tga,
@@ -30,7 +30,7 @@ const images = <String>[
 
 bool isImage(String name) {
   name = name.toLowerCase();
-  for (var image in images) {
+  for (var image in imageExtensions) {
     if (name.endsWith(".$image")) {
       return true;
     }

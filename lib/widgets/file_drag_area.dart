@@ -1,3 +1,4 @@
+import 'package:batch_image_crop/file_utils.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -34,12 +35,20 @@ Widget _fileDragArea(BuildContext context,
           child: Container(
             color: theme.dialogTheme.barrierColor,
             child: Center(
-              child: const Text(
-                "拖拽添加图片",
-                style: TextStyle(fontSize: 50, color: Colors.white),
+              child: Text(
+                child == null ? "点击或拖拽添加图片" : "松开添加图片",
+                style: const TextStyle(fontSize: 50, color: Colors.white),
               ).fittedBox(fit: BoxFit.fitWidth),
             ),
-          ).ignorePointer(),
+          ).cursor(SystemMouseCursors.click).gestures(
+                onTap: () async {
+                  final files = await pickImageFiles();
+                  if (files != null) {
+                    callback(files);
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
+              ),
         ),
     ]),
   );

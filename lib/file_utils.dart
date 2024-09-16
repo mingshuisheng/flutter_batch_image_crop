@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
+import 'package:file_picker/file_picker.dart';
 
 import 'image_format.dart';
 
@@ -35,4 +36,21 @@ Future<List<XFile>> getImageFile(Iterable<String> paths) async {
     }
   }
   return result;
+}
+
+Future<List<XFile>?> pickImageFiles() async {
+  final fileResult = await FilePicker.platform.pickFiles(
+      dialogTitle: "添加需要编辑的图片",
+      allowMultiple: true,
+      lockParentWindow: true,
+      type: FileType.custom,
+      allowedExtensions: imageExtensions);
+  if (fileResult == null) return null;
+  final files = <XFile>[];
+  for (final file in fileResult.files) {
+    if (file.path != null) {
+      files.add(XFile(file.path!));
+    }
+  }
+  return files.isEmpty ? null : files;
 }

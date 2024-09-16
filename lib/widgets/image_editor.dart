@@ -10,6 +10,7 @@ import 'package:gesture_x_detector/gesture_x_detector.dart';
 import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:styled_widget/styled_widget.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../hooks/index.dart';
 import '../styled/index.dart';
@@ -187,17 +188,43 @@ ValueNotifier<MouseCursor> useCursor(ActionState actionState,
   );
 }
 
-TapEventListener useDoubleClickHandler(ValueNotifier<ActionState> actionState,
-    ValueNotifier<bool> isCtrlPressed, ValueNotifier<Rect> originClipRect) {
+TapEventListener useDoubleClickHandler(
+    ValueNotifier<ActionState> actionState,
+    ValueNotifier<bool> isCtrlPressed,
+    ValueNotifier<Rect> originClipRect,
+    ValueNotifier<double> scale,
+    ScrollController horizontalController,
+    ScrollController verticalController) {
   return useMemoized(() => (TapEvent e) {
         if (actionState.value == ActionState.none && !isCtrlPressed.value) {
-          originClipRect.value = e.localPos & originClipRect.value.size;
+          final newPos = (e.localPos +
+                  Offset(
+                      horizontalController.offset, verticalController.offset)) /
+              scale.value;
+          originClipRect.value = newPos & originClipRect.value.size;
         }
       });
 }
 
+class HandleWindowMaximize with WindowListener {
+  final VoidCallback callback;
+
+  HandleWindowMaximize({required this.callback});
+
+  @override
+  void onWindowMaximize() {
+    callback();
+    super.onWindowMaximize();
+  }
+}
+
 @hwidget
 Widget _imageEditor(BuildContext buildContext, {required String path}) {
+  // fix full screen is not rebuild
+  // MediaQuery.of(buildContext);
+
+  // final toResult = useState(UniqueKey());
+
   final scale = useState(1.0);
   const originBorderWidth = 5.0;
   final originSize = useRef(Size.zero);
@@ -218,8 +245,23 @@ Widget _imageEditor(BuildContext buildContext, {required String path}) {
   final (isCtrlPressed, keyboardHandler) = useIsCtrlPressed();
   final actionState = useState(ActionState.none);
 
-  final doubleClickHandler =
-      useDoubleClickHandler(actionState, isCtrlPressed, originClipRect);
+  final hovController = useScrollController();
+  final verController = useScrollController();
+
+  //fix on Window Maximize scroll position incorrect
+  useEffect(() {
+    final handler = HandleWindowMaximize(callback: () {
+      hovController.jumpTo(0);
+      verController.jumpTo(0);
+    });
+    windowManager.addListener(handler);
+    return () {
+      windowManager.removeListener(handler);
+    };
+  }, []);
+
+  final doubleClickHandler = useDoubleClickHandler(actionState, isCtrlPressed,
+      originClipRect, scale, hovController, verController);
 
   final (
     mouseInClipRect,
@@ -280,7 +322,10 @@ Widget _imageEditor(BuildContext buildContext, {required String path}) {
         ],
       ),
     )
-        .twoDimensionalScrollView(isCtrlPressed.value)
+        .twoDimensionalScrollView(
+            disable: isCtrlPressed.value,
+            horizontalController: hovController,
+            verticalController: verController)
         .gestureX(onDoubleTap: doubleClickHandler)
         .listener(
             onPointerDown: onPointerDown,
